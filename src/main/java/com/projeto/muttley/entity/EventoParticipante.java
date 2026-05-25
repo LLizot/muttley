@@ -57,6 +57,9 @@ public class EventoParticipante {
     @Column(nullable = false)
     private Boolean presencaConfirmada;
 
+    @Column(nullable = false)
+    private Boolean ganhouMedalha;
+
     @PrePersist
     private void prePersist() {
         if (dataInscricao == null) {
@@ -64,6 +67,9 @@ public class EventoParticipante {
         }
         if (presencaConfirmada == null) {
             presencaConfirmada = Boolean.FALSE;
+        }
+        if (ganhouMedalha == null) {
+            ganhouMedalha = Boolean.FALSE;
         }
     }
 }
