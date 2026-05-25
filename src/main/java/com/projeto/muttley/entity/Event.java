@@ -1,22 +1,27 @@
 package com.projeto.muttley.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "events")
@@ -27,16 +32,83 @@ import lombok.NoArgsConstructor;
 public class Event {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @NotBlank
-    @Size(min = 2, max = 120)
+    @Column(nullable = false, length = 200)
+    private String titulo;
+
     @Column(nullable = false)
-    private String nome;
+    private LocalDate dataInicial;
 
-    @ManyToMany
-    @JoinTable(name = "event_clients", joinColumns = @JoinColumn(name = "event_id"), inverseJoinColumns = @JoinColumn(name = "client_id"))
+    @Column(nullable = false)
+    private LocalDate dataFinal;
+
+    private Integer cargaHoraria;
+
+    private Integer pontos;
+
+    @Column(length = 120)
+    private String tipo;
+
+    @Column(length = 200)
+    private String assuntoEvento;
+
+    @Column(length = 2000)
+    private String descricao;
+
+    @Column(length = 2000)
+    private String competencias;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Modalidade modalidade;
+
+    @Column(length = 255)
+    private String endereco;
+
+    private Integer capacidade;
+
+    @Column(length = 500)
+    private String urlAssinaturaSignatario;
+
+    @Column(length = 120)
+    private String nomeSignatario;
+
+    @Column(length = 120)
+    private String cargoSignatario;
+
+    @Column(length = 1000)
+    private String qrCodeInscricao;
+
+    @Column(length = 500)
+    private String urlInscricao;
+
+    @Column(length = 1000)
+    private String qrCodeConfirmacao;
+
+    @Column(length = 500)
+    private String urlConfirmacao;
+
+    @Column(nullable = false)
+    private LocalDateTime dataCriacao;
+
+    @Column(nullable = false)
+    private Boolean finalized;
+
+    @OneToMany(mappedBy = "evento", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<Client> clientes = new HashSet<>();
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<EventoParticipante> participantes = new HashSet<>();
+
+    @PrePersist
+    private void prePersist() {
+        if (dataCriacao == null) {
+            dataCriacao = LocalDateTime.now();
+        }
+        if (finalized == null) {
+            finalized = Boolean.FALSE;
+        }
+    }
 }

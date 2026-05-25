@@ -27,6 +27,8 @@ public class SecurityConfig {
                 .exceptionHandling(handler -> handler.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/events/*/inscricoes").permitAll()
+                        .requestMatchers("/events/*/confirmacoes").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults());
 

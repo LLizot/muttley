@@ -5,16 +5,19 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "clients")
@@ -25,20 +28,31 @@ import lombok.NoArgsConstructor;
 public class Client {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @NotBlank
-    @Size(min = 2, max = 120)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 120)
     private String nome;
 
-    @NotBlank
-    @Size(min = 11, max = 11)
+    @Column(nullable = false, length = 200)
+    private String email;
+
     @Column(nullable = false, unique = true, length = 11)
     private String cpf;
 
-    @ManyToMany(mappedBy = "clientes")
+    @Column(nullable = false)
+    private LocalDateTime dataCriacao;
+
+    @OneToMany(mappedBy = "client")
     @Builder.Default
-    private Set<Event> eventos = new HashSet<>();
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<EventoParticipante> participacoes = new HashSet<>();
+
+    @PrePersist
+    private void prePersist() {
+        if (dataCriacao == null) {
+            dataCriacao = LocalDateTime.now();
+        }
+    }
 }

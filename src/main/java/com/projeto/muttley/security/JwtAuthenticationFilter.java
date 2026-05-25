@@ -35,7 +35,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
-        if (path.startsWith("/auth/login")) {
+        if (path.startsWith("/auth/login")
+                || path.matches("^/events/[^/]+/inscricoes/?$")
+                || path.matches("^/events/[^/]+/confirmacoes/?$")) {
             filterChain.doFilter(request, response);
             return;
         }
