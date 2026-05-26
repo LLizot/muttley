@@ -254,13 +254,7 @@ public class EventService {
             throw new IllegalStateException("Assinatura do signatario obrigatoria para gerar certificado");
         }
 
-        byte[] backgroundImage = null;
-        if (Boolean.TRUE.equals(participante.getGanhouMedalha())) {
-            backgroundImage = participante.getPlanoDeFundoMedalha();
-        }
-        if (!isImageBuffer(backgroundImage)) {
-            backgroundImage = loadDefaultBackgroundImage();
-        }
+        byte[] backgroundImage = loadDefaultBackgroundImage();
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("name", participante.getClient().getNome());

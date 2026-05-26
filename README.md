@@ -59,11 +59,19 @@ Veja o arquivo [`endpoints.txt`](endpoints.txt) para exemplos de uso e payloads.
 - Eventos: `/events`
 - Participantes: `/events/{eventoId}/participantes`
 - Finalização de evento: `/events/{id}/finalizar` (gera certificados e envia por e-mail)
+- Medalha em lote: `POST /events/participantes/medalha` (gera certificados e envia por e-mail)
 - Teste de e-mail: `POST /emails/test` (body: `{ "email": "destinatario@exemplo.com" }`)
 
 ## Geração de Certificados
 
-Ao finalizar um evento, certificados em PDF são gerados e enviados automaticamente para os participantes presentes, usando templates HTML com Thymeleaf e conversão para PDF via Flying Saucer.
+Ao finalizar um evento, certificados em PDF são gerados via uma API externa e enviados automaticamente para os participantes presentes.
+
+Configurar a URL do gerador externo em `application.properties`:
+```properties
+certificate.generator.base-url=http://localhost:1336
+```
+
+Na rota de medalha em lote, o certificado usa `descricaoMedalha` e `competenciasMedalha` como texto de apresentacao e, se houver `arquivoPlanoDeFundo`, ele vira o `backgroundImage`. Caso contrario, usa a imagem padrao `templates/imagem teste.jpg`.
 
 ## Observações
 
