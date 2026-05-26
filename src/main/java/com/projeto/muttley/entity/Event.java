@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -69,8 +70,9 @@ public class Event {
 
     private Integer capacidade;
 
-    @Column(length = 500)
-    private String urlAssinaturaSignatario;
+    @Lob
+    @Column(name = "url_assinatura_signatario")
+    private byte[] assinaturaSignatario;
 
     @Column(length = 120)
     private String nomeSignatario;

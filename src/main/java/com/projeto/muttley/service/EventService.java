@@ -1,6 +1,6 @@
 package com.projeto.muttley.service;
 
-import com.projeto.muttley.dto.EventRequestDTO;
+import com.projeto.muttley.dto.EventFormData;
 import com.projeto.muttley.dto.EventResponseDTO;
 import com.projeto.muttley.dto.EventSummaryDTO;
 import com.projeto.muttley.dto.ParticipanteVinculoRequestDTO;
@@ -13,6 +13,7 @@ import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
 import com.projeto.muttley.repository.EventRepository;
 import java.time.LocalDateTime;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -34,9 +35,9 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponseDTO create(EventRequestDTO request) {
-        Event event = buildEventFromRequest(request);
-        attachEquipeParticipantes(event, request.getParticipantesEquipe());
+    public EventResponseDTO create(EventFormData form) {
+        Event event = buildEventFromForm(form);
+        attachEquipeParticipantes(event, form.getParticipantesEquipe());
         Event saved = eventRepository.save(event);
         return toResponse(saved);
     }
@@ -57,15 +58,15 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponseDTO update(UUID id, EventRequestDTO request) {
+    public EventResponseDTO update(UUID id, EventFormData form) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento nao encontrado"));
 
         validateNotFinalized(event);
 
-        updateEventFromRequest(event, request);
-        if (request.getParticipantesEquipe() != null) {
-            attachEquipeParticipantes(event, request.getParticipantesEquipe());
+        updateEventFromForm(event, form, false);
+        if (form.getParticipantesEquipe() != null) {
+            attachEquipeParticipantes(event, form.getParticipantesEquipe());
         }
 
         Event saved = eventRepository.save(event);
@@ -93,32 +94,36 @@ public class EventService {
         return toResponse(saved);
     }
 
-    private Event buildEventFromRequest(EventRequestDTO request) {
+    private Event buildEventFromForm(EventFormData form) {
         Event event = new Event();
-        updateEventFromRequest(event, request);
+        updateEventFromForm(event, form, true);
         return event;
     }
 
-    private void updateEventFromRequest(Event event, EventRequestDTO request) {
-        event.setTitulo(request.getTitulo());
-        event.setDataInicial(request.getDataInicial());
-        event.setDataFinal(request.getDataFinal());
-        event.setCargaHoraria(request.getCargaHoraria());
-        event.setPontos(request.getPontos());
-        event.setTipo(request.getTipo());
-        event.setAssuntoEvento(request.getAssuntoEvento());
-        event.setDescricao(request.getDescricao());
-        event.setCompetencias(request.getCompetencias());
-        event.setModalidade(request.getModalidade());
-        event.setEndereco(request.getEndereco());
-        event.setCapacidade(request.getCapacidade());
-        event.setUrlAssinaturaSignatario(request.getUrlAssinaturaSignatario());
-        event.setNomeSignatario(request.getNomeSignatario());
-        event.setCargoSignatario(request.getCargoSignatario());
-        event.setQrCodeInscricao(request.getQrCodeInscricao());
-        event.setUrlInscricao(request.getUrlInscricao());
-        event.setQrCodeConfirmacao(request.getQrCodeConfirmacao());
-        event.setUrlConfirmacao(request.getUrlConfirmacao());
+    private void updateEventFromForm(Event event, EventFormData form, boolean requiresSignature) {
+        event.setTitulo(form.getTitulo());
+        event.setDataInicial(form.getDataInicial());
+        event.setDataFinal(form.getDataFinal());
+        event.setCargaHoraria(form.getCargaHoraria());
+        event.setPontos(form.getPontos());
+        event.setTipo(form.getTipo());
+        event.setAssuntoEvento(form.getAssuntoEvento());
+        event.setDescricao(form.getDescricao());
+        event.setCompetencias(form.getCompetencias());
+        event.setModalidade(form.getModalidade());
+        event.setEndereco(form.getEndereco());
+        event.setCapacidade(form.getCapacidade());
+        if (form.getArquivoAssinaturaSignatario() != null && !form.getArquivoAssinaturaSignatario().isEmpty()) {
+            event.setAssinaturaSignatario(toBytes(form.getArquivoAssinaturaSignatario()));
+        } else if (requiresSignature) {
+            throw new IllegalStateException("Arquivo de assinatura do signatario obrigatorio");
+        }
+        event.setNomeSignatario(form.getNomeSignatario());
+        event.setCargoSignatario(form.getCargoSignatario());
+        event.setQrCodeInscricao(form.getQrCodeInscricao());
+        event.setUrlInscricao(form.getUrlInscricao());
+        event.setQrCodeConfirmacao(form.getQrCodeConfirmacao());
+        event.setUrlConfirmacao(form.getUrlConfirmacao());
     }
 
     private void validateNotFinalized(Event event) {
@@ -175,7 +180,7 @@ public class EventService {
                 .modalidade(event.getModalidade())
                 .endereco(event.getEndereco())
                 .capacidade(event.getCapacidade())
-                .urlAssinaturaSignatario(event.getUrlAssinaturaSignatario())
+                .assinaturaSignatario(event.getAssinaturaSignatario())
                 .nomeSignatario(event.getNomeSignatario())
                 .cargoSignatario(event.getCargoSignatario())
                 .qrCodeInscricao(event.getQrCodeInscricao())
@@ -185,6 +190,14 @@ public class EventService {
                 .dataCriacao(event.getDataCriacao())
                 .finalized(event.getFinalized())
                 .build();
+    }
+
+    private byte[] toBytes(org.springframework.web.multipart.MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException ex) {
+            throw new IllegalStateException("Falha ao ler arquivo de assinatura", ex);
+        }
     }
 
     private EventSummaryDTO toSummary(Event event) {
