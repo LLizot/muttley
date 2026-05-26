@@ -71,7 +71,7 @@ Configurar a URL do gerador externo em `application.properties`:
 certificate.generator.base-url=http://localhost:1336
 ```
 
-Na rota de medalha em lote, o certificado usa `descricaoMedalha` e `competenciasMedalha` como texto de apresentacao e, se houver `arquivoPlanoDeFundo`, ele vira o `backgroundImage`. Caso contrario, usa a imagem padrao `templates/imagem teste.jpg`.
+Na rota de medalha em lote, o certificado usa `descricaoMedalha` e `competenciasMedalha` como texto de apresentacao e, se houver `arquivoPlanoDeFundo`, ele vira o `backgroundImage`. Caso contrario, usa a imagem padrao `templates/background.png`.
 
 ## Observações
 

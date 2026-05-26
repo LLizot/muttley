@@ -371,7 +371,7 @@ public class EventService {
 
     private byte[] loadDefaultBackgroundImage() {
         try {
-            ClassPathResource resource = new ClassPathResource("templates/imagem teste.jpg");
+            ClassPathResource resource = new ClassPathResource("templates/background.png");
             return resource.getContentAsByteArray();
         } catch (IOException ex) {
             return defaultTransparentPng();

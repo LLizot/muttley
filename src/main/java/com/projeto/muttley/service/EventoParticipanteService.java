@@ -291,7 +291,7 @@ public class EventoParticipanteService {
 
         private byte[] loadDefaultBackgroundImage() {
                 try {
-                        ClassPathResource resource = new ClassPathResource("templates/imagem teste.jpg");
+                        ClassPathResource resource = new ClassPathResource("templates/background.png");
                         return resource.getContentAsByteArray();
                 } catch (IOException ex) {
                         throw new IllegalStateException("Falha ao carregar imagem padrao", ex);
