@@ -1,0 +1,133 @@
+ENDPOINTS
+
+BASE: http://localhost:8080
+
+HEALTHCHECK
+GET /
+- Response: "API funcionando"
+
+EMAIL
+POST /emails/test
+Body (JSON):
+{
+  "email": "destinatario@exemplo.com"
+}
+
+AUTH
+POST /auth/login
+Body (JSON):
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+CLIENTS
+POST /clients
+Body (JSON):
+{
+  "nome": "Maria Silva",
+  "cpf": "12345678901",
+  "email": "maria@exemplo.com"
+}
+
+GET /clients
+Query params (opcionais):
+- nome: filtro por nome (LIKE, case-insensitive)
+- page: pagina (1-based)
+- size: tamanho da pagina (default 10)
+- sort: ordenacao, ex: nome,asc | totalPontos,desc
+Exemplo:
+/clients?nome=maria&page=1&size=10&sort=totalPontos,desc
+
+GET /clients/{clientId}/historico-eventos
+Query params (opcionais):
+- titulo: filtro por titulo (LIKE, case-insensitive)
+- page: pagina (1-based)
+- size: tamanho da pagina (default 10)
+- sort: ordenacao, ex: dataInicial,desc
+Response (Page<EventoHistoricoDTO>):
+- id, titulo, modalidade, dataInicial, dataFinal, status
+Exemplo:
+/clients/11111111-1111-1111-1111-111111111111/historico-eventos?titulo=java&page=1&size=10&sort=dataInicial,desc
+
+EVENTS
+POST /events
+Content-Type: multipart/form-data
+Form-data:
+- titulo: Workshop Java
+- dataInicial: 2026-06-10
+- dataFinal: 2026-06-10
+- cargaHoraria: 8
+- pontos: 20
+- tipo: Capacitacao
+- assuntoEvento: Spring Boot
+- descricao: Introducao ao Spring Boot
+- competencias: API REST, JPA
+- modalidade: PRESENCIAL
+- endereco: Rua A, 123
+- capacidade: 100
+- arquivoAssinaturaSignatario: (arquivo binario)
+- nomeSignatario: Ana Souza
+- cargoSignatario: Coordenadora
+- qrCodeInscricao: data:image/png;base64,...
+- urlInscricao: https://exemplo.com/inscricao
+- qrCodeConfirmacao: data:image/png;base64,...
+- urlConfirmacao: https://exemplo.com/confirmacao
+- participantesEquipe[0].clientId: 00000000-0000-0000-0000-000000000000
+- participantesEquipe[0].tipoParticipante: PALESTRANTE
+
+GET /events
+Query params (opcionais):
+- titulo: filtro por titulo (LIKE, case-insensitive)
+- page: pagina (1-based)
+- size: tamanho da pagina (default 10)
+- sort: ordenacao, ex: titulo,asc
+Exemplo:
+/events?titulo=java&page=1&size=10&sort=titulo,asc
+
+GET /events/{id}
+Exemplo:
+/events/11111111-1111-1111-1111-111111111111
+Response:
+- assinaturaSignatario: base64
+
+PUT /events/{id}
+Content-Type: multipart/form-data
+Form-data: mesmo payload do POST /events
+
+DELETE /events/{id}
+
+PATCH /events/{id}/finalizar
+
+EVENTO PARTICIPANTES
+POST /events/{eventoId}/inscricoes
+Body (JSON):
+{
+  "nome": "Joao Santos",
+  "email": "joao@exemplo.com",
+  "cpf": "98765432100"
+}
+
+POST /events/{eventoId}/confirmacoes
+Body (JSON):
+{
+  "cpf": "98765432100"
+}
+
+GET /events/{eventoId}/participantes
+Query params (opcionais):
+- page: pagina (1-based)
+- size: tamanho da pagina (default 10)
+- sort: ordenacao, ex: client.nome,asc | dataInscricao,desc
+Exemplo:
+/events/11111111-1111-1111-1111-111111111111/participantes?page=1&size=10&sort=client.nome,asc
+
+POST /events/participantes/medalha
+Content-Type: multipart/form-data
+Form-data:
+- eventoId: 11111111-1111-1111-1111-111111111111
+- participanteIds: 22222222-2222-2222-2222-222222222222
+- participanteIds: 33333333-3333-3333-3333-333333333333
+- descricaoMedalha: Medalha de Participacao
+- competenciasMedalha: IA, Cloud
+- arquivoPlanoDeFundo: (arquivo binario)
