@@ -1,12 +1,17 @@
 package com.projeto.muttley.service;
 
 import com.projeto.muttley.dto.ClientCreateRequestDTO;
+import com.projeto.muttley.dto.ClientEventHistoryItemDTO;
 import com.projeto.muttley.dto.ClientResponseDTO;
 import com.projeto.muttley.entity.Client;
+import com.projeto.muttley.entity.Event;
 import com.projeto.muttley.exception.ResourceAlreadyExistsException;
+import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
+import com.projeto.muttley.repository.EventRepository;
 import com.projeto.muttley.repository.projection.ClientAggregateProjection;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final EventRepository eventRepository;
 
-    public ClientService(ClientRepository clientRepository) {
+    public ClientService(ClientRepository clientRepository, EventRepository eventRepository) {
         this.clientRepository = clientRepository;
+        this.eventRepository = eventRepository;
     }
 
     @Transactional
@@ -54,6 +61,22 @@ public class ClientService {
         return page.map(this::toResponse);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ClientEventHistoryItemDTO> listEventHistory(UUID clientId, String titulo, Pageable pageable) {
+        if (!clientRepository.existsById(clientId)) {
+            throw new ResourceNotFoundException("Cliente nao encontrado");
+        }
+
+        Page<Event> page = (titulo == null || titulo.isBlank())
+                ? eventRepository.findDistinctByParticipantesClientId(clientId, pageable)
+                : eventRepository.findDistinctByParticipantesClientIdAndTituloContainingIgnoreCase(
+                        clientId,
+                        titulo,
+                        pageable);
+
+        return page.map(this::toHistoryItem);
+    }
+
     private ClientResponseDTO toResponse(ClientAggregateProjection projection) {
         return ClientResponseDTO.builder()
                 .id(projection.getId())
@@ -64,6 +87,19 @@ public class ClientService {
                 .totalPontos(toInt(projection.getTotalPontos()))
                 .totalCertificados(toInt(projection.getTotalCertificados()))
                 .totalMedalhas(toInt(projection.getTotalMedalhas()))
+                .build();
+    }
+
+    private ClientEventHistoryItemDTO toHistoryItem(Event event) {
+        String status = Boolean.TRUE.equals(event.getFinalized()) ? "FINALIZADO" : "EM_ANDAMENTO";
+
+        return ClientEventHistoryItemDTO.builder()
+                .id(event.getId())
+                .titulo(event.getTitulo())
+                .modalidade(event.getModalidade())
+                .dataInicial(event.getDataInicial())
+                .dataFinal(event.getDataFinal())
+                .status(status)
                 .build();
     }
 

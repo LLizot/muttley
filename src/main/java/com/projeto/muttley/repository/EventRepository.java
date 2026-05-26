@@ -8,4 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface EventRepository extends JpaRepository<Event, UUID> {
     Page<Event> findByTituloContainingIgnoreCase(String titulo, Pageable pageable);
+
+    Page<Event> findDistinctByParticipantesClientId(UUID clientId, Pageable pageable);
+
+    Page<Event> findDistinctByParticipantesClientIdAndTituloContainingIgnoreCase(
+            UUID clientId,
+            String titulo,
+            Pageable pageable);
 }
