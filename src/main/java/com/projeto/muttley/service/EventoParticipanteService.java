@@ -4,6 +4,7 @@ import com.projeto.muttley.dto.ClientResponseDTO;
 import com.projeto.muttley.dto.EventoParticipanteListItemDTO;
 import com.projeto.muttley.dto.EventoParticipanteListResponseDTO;
 import com.projeto.muttley.dto.EventoParticipanteResponseDTO;
+import com.projeto.muttley.dto.MedalhaEmLoteForm;
 import com.projeto.muttley.entity.Client;
 import com.projeto.muttley.entity.Event;
 import com.projeto.muttley.entity.EventoParticipante;
@@ -12,7 +13,9 @@ import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
 import com.projeto.muttley.repository.EventRepository;
 import com.projeto.muttley.repository.EventoParticipanteRepository;
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -98,6 +101,33 @@ public class EventoParticipanteService {
                                 .build();
         }
 
+        @Transactional
+        public void concederMedalhaEmLote(MedalhaEmLoteForm form) {
+                byte[] planoDeFundo = toBytes(form);
+
+                List<UUID> ids = form.getParticipanteIds();
+                List<EventoParticipante> participantes = eventoParticipanteRepository
+                                .findByEventoIdAndIdIn(form.getEventoId(), ids);
+
+                if (participantes.isEmpty()) {
+                        participantes = eventoParticipanteRepository
+                                        .findByEventoIdAndClientIdIn(form.getEventoId(), ids);
+                }
+
+                if (participantes.isEmpty()) {
+                        throw new ResourceNotFoundException("Participantes nao encontrados para o evento");
+                }
+
+                for (EventoParticipante participante : participantes) {
+                        participante.setGanhouMedalha(Boolean.TRUE);
+                        participante.setDescricaoMedalha(form.getDescricaoMedalha());
+                        participante.setCompetenciasMedalha(form.getCompetenciasMedalha());
+                        participante.setPlanoDeFundoMedalha(planoDeFundo);
+                }
+
+                eventoParticipanteRepository.saveAll(participantes);
+        }
+
         private EventoParticipanteResponseDTO toResponse(EventoParticipante participante) {
                 return EventoParticipanteResponseDTO.builder()
                                 .id(participante.getId())
@@ -119,11 +149,23 @@ public class EventoParticipanteService {
                                 : "INSCRITO";
 
                 return EventoParticipanteListItemDTO.builder()
+                                .id(participante.getId())
                                 .nome(participante.getClient().getNome())
                                 .email(participante.getClient().getEmail())
                                 .tipoParticipante(participante.getTipoParticipante())
                                 .dataInscricao(participante.getDataInscricao())
                                 .statusPresenca(status)
                                 .build();
+        }
+
+        private byte[] toBytes(MedalhaEmLoteForm form) {
+                try {
+                        if (form.getArquivoPlanoDeFundo() == null || form.getArquivoPlanoDeFundo().isEmpty()) {
+                                throw new IllegalStateException("Arquivo de plano de fundo obrigatorio");
+                        }
+                        return form.getArquivoPlanoDeFundo().getBytes();
+                } catch (IOException ex) {
+                        throw new IllegalStateException("Falha ao ler arquivo de plano de fundo", ex);
+                }
         }
 }

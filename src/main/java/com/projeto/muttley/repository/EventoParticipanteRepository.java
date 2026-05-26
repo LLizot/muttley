@@ -1,6 +1,7 @@
 package com.projeto.muttley.repository;
 
 import com.projeto.muttley.entity.EventoParticipante;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -15,4 +16,8 @@ public interface EventoParticipanteRepository extends JpaRepository<EventoPartic
     long countByEventoId(UUID eventoId);
 
     long countByEventoIdAndPresencaConfirmadaTrue(UUID eventoId);
+
+    List<EventoParticipante> findByEventoIdAndIdIn(UUID eventoId, List<UUID> ids);
+
+    List<EventoParticipante> findByEventoIdAndClientIdIn(UUID eventoId, List<UUID> clientIds);
 }

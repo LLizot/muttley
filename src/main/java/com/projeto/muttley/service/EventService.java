@@ -189,6 +189,7 @@ public class EventService {
 
     private EventSummaryDTO toSummary(Event event) {
         return EventSummaryDTO.builder()
+                .id(event.getId())
                 .titulo(event.getTitulo())
                 .modalidade(event.getModalidade())
                 .dataInicial(event.getDataInicial())
