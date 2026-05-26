@@ -13,24 +13,31 @@ import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
 import com.projeto.muttley.repository.EventRepository;
 import com.projeto.muttley.repository.EventoParticipanteRepository;
-import java.io.ByteArrayOutputStream;
-import java.time.LocalDateTime;
-import java.time.LocalDate;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.UUID;
-import java.util.Base64;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.thymeleaf.context.Context;
-import org.thymeleaf.spring6.SpringTemplateEngine;
-import org.xhtmlrenderer.pdf.ITextRenderer;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 public class EventService {
@@ -39,18 +46,21 @@ public class EventService {
     private final ClientRepository clientRepository;
     private final EventoParticipanteRepository eventoParticipanteRepository;
     private final JavaMailSender mailSender;
-    private final SpringTemplateEngine templateEngine;
+    private final RestTemplate restTemplate;
+    private final String certificateServiceBaseUrl;
 
     public EventService(EventRepository eventRepository,
             ClientRepository clientRepository,
             EventoParticipanteRepository eventoParticipanteRepository,
             JavaMailSender mailSender,
-            SpringTemplateEngine templateEngine) {
+            RestTemplateBuilder restTemplateBuilder,
+            @Value("${certificate.generator.base-url}") String certificateServiceBaseUrl) {
         this.eventRepository = eventRepository;
         this.clientRepository = clientRepository;
         this.eventoParticipanteRepository = eventoParticipanteRepository;
         this.mailSender = mailSender;
-        this.templateEngine = templateEngine;
+        this.restTemplate = restTemplateBuilder.build();
+        this.certificateServiceBaseUrl = certificateServiceBaseUrl;
     }
 
     @Transactional
@@ -115,7 +125,7 @@ public class EventService {
                 .findByEventoIdAndPresencaConfirmadaTrue(saved.getId());
 
         for (EventoParticipante participante : presentes) {
-            byte[] pdf = generateCertificatePdf(saved, participante);
+            byte[] pdf = requestCertificatePdf(saved, participante);
             sendCertificateEmail(participante, pdf, saved.getTitulo());
         }
         return toResponse(saved);
@@ -238,33 +248,44 @@ public class EventService {
                 .build();
     }
 
-    private byte[] generateCertificatePdf(Event event, EventoParticipante participante) {
-        Context context = new Context();
-        context.setVariable("dataGeracao", LocalDate.now());
-        context.setVariable("cargaHoraria", event.getCargaHoraria());
-        context.setVariable("assuntoEvento", event.getAssuntoEvento());
-        context.setVariable("descricao", event.getDescricao());
-        context.setVariable("nomeSignatario", event.getNomeSignatario());
-        context.setVariable("cargoSignatario", event.getCargoSignatario());
-        context.setVariable("assinaturaSignatarioBase64", toBase64(event.getAssinaturaSignatario()));
-        context.setVariable("nomeParticipante", participante.getClient().getNome());
-        context.setVariable("emailParticipante", participante.getClient().getEmail());
-        context.setVariable("ganhouMedalha", Boolean.TRUE.equals(participante.getGanhouMedalha()));
-        context.setVariable("descricaoMedalha", participante.getDescricaoMedalha());
-        context.setVariable("competenciasMedalha", participante.getCompetenciasMedalha());
-        context.setVariable("planoDeFundoBase64", toBase64(participante.getPlanoDeFundoMedalha()));
-
-        String html = templateEngine.process("certificado", context);
-
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            ITextRenderer renderer = new ITextRenderer();
-            renderer.setDocumentFromString(html);
-            renderer.layout();
-            renderer.createPDF(outputStream);
-            return outputStream.toByteArray();
-        } catch (IOException ex) {
-            throw new IllegalStateException("Falha ao gerar PDF do certificado", ex);
+    private byte[] requestCertificatePdf(Event event, EventoParticipante participante) {
+        byte[] signatureImage = event.getAssinaturaSignatario();
+        if (!isImageBuffer(signatureImage)) {
+            throw new IllegalStateException("Assinatura do signatario obrigatoria para gerar certificado");
         }
+
+        byte[] backgroundImage = null;
+        if (Boolean.TRUE.equals(participante.getGanhouMedalha())) {
+            backgroundImage = participante.getPlanoDeFundoMedalha();
+        }
+        if (!isImageBuffer(backgroundImage)) {
+            backgroundImage = loadDefaultBackgroundImage();
+        }
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("name", participante.getClient().getNome());
+        body.add("presentation", buildPresentation(event));
+        body.add("event", event.getTitulo());
+        body.add("day", formatDay(event));
+        body.add("hours", String.valueOf(toHours(event.getCargaHoraria())));
+        body.add("responsible", event.getNomeSignatario());
+        body.add("responsibleDescription", event.getCargoSignatario());
+        body.add("backgroundImage", toFileResource(backgroundImage, "background.png"));
+        body.add("signatureImage", toFileResource(signatureImage, "signature.png"));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<byte[]> response = restTemplate.postForEntity(
+                certificateServiceBaseUrl + "/api/certificate/generate",
+                request,
+                byte[].class);
+
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            throw new IllegalStateException("Falha ao gerar PDF do certificado");
+        }
+        return response.getBody();
     }
 
     private void sendCertificateEmail(EventoParticipante participante, byte[] pdf, String tituloEvento) {
@@ -282,10 +303,84 @@ public class EventService {
         }
     }
 
-    private String toBase64(byte[] value) {
-        if (value == null || value.length == 0) {
-            return null;
+    private String formatDay(Event event) {
+        LocalDate date = event.getDataFinal() != null ? event.getDataFinal() : event.getDataInicial();
+        if (date == null) {
+            date = LocalDate.now();
         }
-        return Base64.getEncoder().encodeToString(value);
+        return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
+    private String buildPresentation(Event event) {
+        if (event.getDescricao() != null && !event.getDescricao().isBlank()) {
+            return event.getDescricao();
+        }
+        if (event.getAssuntoEvento() != null && !event.getAssuntoEvento().isBlank()) {
+            return event.getAssuntoEvento();
+        }
+        return "Participou do evento";
+    }
+
+    private int toHours(Integer cargaHoraria) {
+        if (cargaHoraria == null) {
+            return 0;
+        }
+        return cargaHoraria;
+    }
+
+    private ByteArrayResource toFileResource(byte[] bytes, String filename) {
+        return new ByteArrayResource(bytes) {
+            @Override
+            public String getFilename() {
+                return filename;
+            }
+        };
+    }
+
+    private boolean isImageBuffer(byte[] bytes) {
+        if (bytes == null || bytes.length < 8) {
+            return false;
+        }
+        return isPng(bytes) || isJpeg(bytes);
+    }
+
+    private boolean isPng(byte[] bytes) {
+        return (bytes[0] == (byte) 0x89
+                && bytes[1] == 0x50
+                && bytes[2] == 0x4E
+                && bytes[3] == 0x47
+                && bytes[4] == 0x0D
+                && bytes[5] == 0x0A
+                && bytes[6] == 0x1A
+                && bytes[7] == 0x0A);
+    }
+
+    private boolean isJpeg(byte[] bytes) {
+        return (bytes[0] == (byte) 0xFF
+                && bytes[1] == (byte) 0xD8
+                && bytes[2] == (byte) 0xFF);
+    }
+
+    private byte[] defaultTransparentPng() {
+        return new byte[] {
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+                0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+                0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+                0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, (byte) 0xC4, (byte) 0x89,
+                0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54,
+                0x78, (byte) 0x9C, 0x63, 0x60, 0x00, 0x00, 0x00, 0x02,
+                0x00, 0x01, (byte) 0xE2, 0x26, 0x05, (byte) 0x9B,
+                0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
+                (byte) 0xAE, 0x42, 0x60, (byte) 0x82
+        };
+    }
+
+    private byte[] loadDefaultBackgroundImage() {
+        try {
+            ClassPathResource resource = new ClassPathResource("templates/imagem teste.jpg");
+            return resource.getContentAsByteArray();
+        } catch (IOException ex) {
+            return defaultTransparentPng();
+        }
     }
 }
