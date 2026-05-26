@@ -17,6 +17,8 @@ public interface EventoParticipanteRepository extends JpaRepository<EventoPartic
 
     long countByEventoIdAndPresencaConfirmadaTrue(UUID eventoId);
 
+    List<EventoParticipante> findByEventoIdAndPresencaConfirmadaTrue(UUID eventoId);
+
     List<EventoParticipante> findByEventoIdAndIdIn(UUID eventoId, List<UUID> ids);
 
     List<EventoParticipante> findByEventoIdAndClientIdIn(UUID eventoId, List<UUID> clientIds);

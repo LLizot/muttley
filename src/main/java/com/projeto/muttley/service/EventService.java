@@ -12,26 +12,45 @@ import com.projeto.muttley.exception.EventFinalizedException;
 import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
 import com.projeto.muttley.repository.EventRepository;
+import com.projeto.muttley.repository.EventoParticipanteRepository;
+import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.UUID;
+import java.util.Base64;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.xhtmlrenderer.pdf.ITextRenderer;
 
 @Service
 public class EventService {
 
     private final EventRepository eventRepository;
     private final ClientRepository clientRepository;
+    private final EventoParticipanteRepository eventoParticipanteRepository;
+    private final JavaMailSender mailSender;
+    private final SpringTemplateEngine templateEngine;
 
-    public EventService(EventRepository eventRepository, ClientRepository clientRepository) {
+    public EventService(EventRepository eventRepository,
+            ClientRepository clientRepository,
+            EventoParticipanteRepository eventoParticipanteRepository,
+            JavaMailSender mailSender,
+            SpringTemplateEngine templateEngine) {
         this.eventRepository = eventRepository;
         this.clientRepository = clientRepository;
+        this.eventoParticipanteRepository = eventoParticipanteRepository;
+        this.mailSender = mailSender;
+        this.templateEngine = templateEngine;
     }
 
     @Transactional
@@ -91,6 +110,14 @@ public class EventService {
         }
 
         Event saved = eventRepository.save(event);
+
+        List<EventoParticipante> presentes = eventoParticipanteRepository
+                .findByEventoIdAndPresencaConfirmadaTrue(saved.getId());
+
+        for (EventoParticipante participante : presentes) {
+            byte[] pdf = generateCertificatePdf(saved, participante);
+            sendCertificateEmail(participante, pdf, saved.getTitulo());
+        }
         return toResponse(saved);
     }
 
@@ -209,5 +236,56 @@ public class EventService {
                 .dataFinal(event.getDataFinal())
                 .finalized(event.getFinalized())
                 .build();
+    }
+
+    private byte[] generateCertificatePdf(Event event, EventoParticipante participante) {
+        Context context = new Context();
+        context.setVariable("dataGeracao", LocalDate.now());
+        context.setVariable("cargaHoraria", event.getCargaHoraria());
+        context.setVariable("assuntoEvento", event.getAssuntoEvento());
+        context.setVariable("descricao", event.getDescricao());
+        context.setVariable("nomeSignatario", event.getNomeSignatario());
+        context.setVariable("cargoSignatario", event.getCargoSignatario());
+        context.setVariable("assinaturaSignatarioBase64", toBase64(event.getAssinaturaSignatario()));
+        context.setVariable("nomeParticipante", participante.getClient().getNome());
+        context.setVariable("emailParticipante", participante.getClient().getEmail());
+        context.setVariable("ganhouMedalha", Boolean.TRUE.equals(participante.getGanhouMedalha()));
+        context.setVariable("descricaoMedalha", participante.getDescricaoMedalha());
+        context.setVariable("competenciasMedalha", participante.getCompetenciasMedalha());
+        context.setVariable("planoDeFundoBase64", toBase64(participante.getPlanoDeFundoMedalha()));
+
+        String html = templateEngine.process("certificado", context);
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            ITextRenderer renderer = new ITextRenderer();
+            renderer.setDocumentFromString(html);
+            renderer.layout();
+            renderer.createPDF(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException ex) {
+            throw new IllegalStateException("Falha ao gerar PDF do certificado", ex);
+        }
+    }
+
+    private void sendCertificateEmail(EventoParticipante participante, byte[] pdf, String tituloEvento) {
+        try {
+            var message = mailSender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, true);
+            helper.setFrom("lizotlucas06@gmail.com");
+            helper.setTo(participante.getClient().getEmail());
+            helper.setSubject("Certificado - " + tituloEvento);
+            helper.setText("Hello World", false);
+            helper.addAttachment("certificado.pdf", new org.springframework.core.io.ByteArrayResource(pdf));
+            mailSender.send(message);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Falha ao enviar certificado", ex);
+        }
+    }
+
+    private String toBase64(byte[] value) {
+        if (value == null || value.length == 0) {
+            return null;
+        }
+        return Base64.getEncoder().encodeToString(value);
     }
 }

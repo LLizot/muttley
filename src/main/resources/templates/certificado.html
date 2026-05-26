@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Certificado</title>
+    <style>
+        body {
+            font-family: "Helvetica", "Arial", sans-serif;
+            margin: 40px;
+            color: #1f2933;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .content {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .signer {
+            margin-top: 32px;
+            text-align: right;
+        }
+
+        .signature {
+            margin-top: 8px;
+            height: 64px;
+        }
+
+        .medal {
+            margin-top: 24px;
+            padding: 12px;
+            border: 1px solid #d9e2ec;
+            border-radius: 6px;
+        }
+
+        .medal img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h2>Certificado de Participacao</h2>
+        <p th:text="'Emitido em ' + ${dataGeracao}"></p>
+    </div>
+
+    <div class="content">
+        <p>
+            Certificamos que <strong th:text="${nomeParticipante}"></strong>
+            (<span th:text="${emailParticipante}"></span>) participou do evento.
+        </p>
+        <p><strong>Carga Horaria:</strong> <span th:text="${cargaHoraria}"></span> horas</p>
+        <p><strong>Assunto:</strong> <span th:text="${assuntoEvento}"></span></p>
+        <p><strong>Descricao:</strong> <span th:text="${descricao}"></span></p>
+
+        <div class="medal" th:if="${ganhouMedalha}">
+            <h4>Medalha</h4>
+            <p><strong>Descricao:</strong> <span th:text="${descricaoMedalha}"></span></p>
+            <p><strong>Competencias:</strong> <span th:text="${competenciasMedalha}"></span></p>
+            <img th:if="${planoDeFundoBase64}" th:src="'data:image/png;base64,' + ${planoDeFundoBase64}"
+                alt="Plano de fundo" />
+        </div>
+    </div>
+
+    <div class="signer">
+        <div th:if="${assinaturaSignatarioBase64}">
+            <img class="signature" th:src="'data:image/png;base64,' + ${assinaturaSignatarioBase64}" alt="Assinatura" />
+        </div>
+        <div>
+            <strong th:text="${nomeSignatario}"></strong><br />
+            <span th:text="${cargoSignatario}"></span>
+        </div>
+    </div>
+</body>
+
+</html>
