@@ -53,7 +53,7 @@ public class EventController {
         @GetMapping
         public ResponseEntity<ApiResponse<Page<EventSummaryDTO>>> findAll(
                         @RequestParam(required = false) String titulo,
-                        @PageableDefault(size = 10, sort = "titulo", direction = Sort.Direction.ASC) Pageable pageable,
+                        @PageableDefault(size = 10, sort = "dataInicial", direction = Sort.Direction.DESC) Pageable pageable,
                         HttpServletRequest httpRequest) {
                 int pageIndex = Math.max(pageable.getPageNumber() - 1, 0);
                 Pageable adjusted = PageRequest.of(pageIndex, pageable.getPageSize(), pageable.getSort());

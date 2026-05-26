@@ -38,6 +38,8 @@ Query params (opcionais):
 - sort: ordenacao, ex: nome,asc | totalPontos,desc
 Exemplo:
 /clients?nome=maria&page=1&size=10&sort=totalPontos,desc
+Observacao:
+- totalPontos nao contabiliza eventos em que o participante esteja como PATROCINADOR.
 
 GET /clients/{clientId}/historico-eventos
 Query params (opcionais):
@@ -81,9 +83,9 @@ Query params (opcionais):
 - titulo: filtro por titulo (LIKE, case-insensitive)
 - page: pagina (1-based)
 - size: tamanho da pagina (default 10)
-- sort: ordenacao, ex: titulo,asc
+- sort: ordenacao, ex: dataInicial,desc | titulo,asc
 Exemplo:
-/events?titulo=java&page=1&size=10&sort=titulo,asc
+/events?titulo=java&page=1&size=10&sort=dataInicial,desc
 
 GET /events/{id}
 Exemplo:

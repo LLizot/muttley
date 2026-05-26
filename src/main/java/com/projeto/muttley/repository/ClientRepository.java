@@ -19,7 +19,7 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
                    c.cpf as cpf,
                    c.email as email,
                    c.dataCriacao as dataCriacao,
-                   coalesce(sum(case when ep.presencaConfirmada = true then coalesce(e.pontos, 0) else 0 end), 0) as totalPontos,
+                   coalesce(sum(case when ep.presencaConfirmada = true and ep.tipoParticipante <> com.projeto.muttley.entity.TipoParticipante.PATROCINADOR then coalesce(e.pontos, 0) else 0 end), 0) as totalPontos,
                    coalesce(sum(case when ep.presencaConfirmada = true and e.finalized = true then 1 else 0 end), 0) as totalCertificados,
                    coalesce(sum(case when ep.ganhouMedalha = true then 1 else 0 end), 0) as totalMedalhas
               from Client c
