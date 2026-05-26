@@ -1,10 +1,8 @@
 package com.projeto.muttley.service;
 
-import com.projeto.muttley.dto.ClientResponseDTO;
 import com.projeto.muttley.dto.EventRequestDTO;
 import com.projeto.muttley.dto.EventResponseDTO;
 import com.projeto.muttley.dto.EventSummaryDTO;
-import com.projeto.muttley.dto.EventoParticipanteResponseDTO;
 import com.projeto.muttley.dto.ParticipanteVinculoRequestDTO;
 import com.projeto.muttley.entity.Client;
 import com.projeto.muttley.entity.Event;
@@ -15,9 +13,9 @@ import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
 import com.projeto.muttley.repository.EventRepository;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -163,21 +161,6 @@ public class EventService {
     }
 
     private EventResponseDTO toResponse(Event event) {
-        List<EventoParticipanteResponseDTO> participantes = event.getParticipantes().stream()
-                .map(participante -> EventoParticipanteResponseDTO.builder()
-                        .id(participante.getId())
-                        .tipoParticipante(participante.getTipoParticipante())
-                        .dataInscricao(participante.getDataInscricao())
-                        .presencaConfirmada(participante.getPresencaConfirmada())
-                        .client(ClientResponseDTO.builder()
-                                .id(participante.getClient().getId())
-                                .nome(participante.getClient().getNome())
-                                .email(participante.getClient().getEmail())
-                                .cpf(participante.getClient().getCpf())
-                                .build())
-                        .build())
-                .toList();
-
         return EventResponseDTO.builder()
                 .id(event.getId())
                 .titulo(event.getTitulo())
@@ -201,7 +184,6 @@ public class EventService {
                 .urlConfirmacao(event.getUrlConfirmacao())
                 .dataCriacao(event.getDataCriacao())
                 .finalized(event.getFinalized())
-                .participantes(participantes)
                 .build();
     }
 
