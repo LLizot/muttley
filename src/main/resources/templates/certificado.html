@@ -64,7 +64,6 @@
         <div class="medal" th:if="${ganhouMedalha}">
             <h4>Medalha</h4>
             <p><strong>Descricao:</strong> <span th:text="${descricaoMedalha}"></span></p>
-            <p><strong>Competencias:</strong> <span th:text="${competenciasMedalha}"></span></p>
             <img th:if="${planoDeFundoBase64}" th:src="'data:image/png;base64,' + ${planoDeFundoBase64}"
                 alt="Plano de fundo" />
         </div>

@@ -353,7 +353,7 @@ public class EventService {
                 + "   " + competenciasLine + ".\n"
                 + "7. Salve o cadastro para exibir o certificado no seu perfil.\n\n"
                 + "Alem disso, nao deixe essa conquista apenas no perfil e publique o certificado no seu feed do LinkedIn para destacar sua participacao no evento. "
-                + "Esse e um passo importante para reforcar sua presenca profissional, evidenciar suas competencias e ampliar a visibilidade do seu perfil para recrutadores e contatos da area. "
+                + "Esse e um passo importante para reforcar sua presenca profissional e ampliar a visibilidade do seu perfil para recrutadores e contatos da area. "
                 + "Ao publicar, nao se esqueca de mencionar tambem a Fatec Zona Leste no texto!\n\n"
                 + "Atenciosamente,\n"
                 + "Fatec Zona Leste";
@@ -371,15 +371,7 @@ public class EventService {
             }
         }
 
-        List<String> resultado = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            if (i < itens.size()) {
-                resultado.add(itens.get(i));
-            } else {
-                resultado.add("Competencia " + (i + 1));
-            }
-        }
-        return String.join(", ", resultado);
+        return String.join(", ", itens);
     }
 
     private String formatDay(Event event) {

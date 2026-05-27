@@ -258,6 +258,15 @@ public class EventoParticipanteService {
 
         private String buildCertificateEmailBody(Event event, EventoParticipante participante) {
                 String competenciasLine = buildCompetenciasLine(chooseCompetencias(event, participante));
+                String competenciasStep = "";
+                String saveStep = "7. Salve o cadastro para exibir o certificado no seu perfil.\n\n";
+                if (competenciasLine != null && !competenciasLine.isBlank()) {
+                        competenciasStep = "6. Na parte de competencias, adicione manualmente as seguintes competencias:\n"
+                                        + "   " + competenciasLine + ".\n";
+                } else {
+                        saveStep = "6. Salve o cadastro para exibir o certificado no seu perfil.\n\n";
+                }
+
                 return "Ola!\n\n"
                                 + "Parabens pela sua conquista! Seu certificado especial referente ao evento "
                                 + event.getTitulo() + " ja esta disponivel em anexo.\n\n"
@@ -267,9 +276,8 @@ public class EventoParticipanteService {
                                 + "3. Clique em Adicionar licenca ou certificado.\n"
                                 + "4. Preencha as informacoes do certificado conforme constam no arquivo em anexo.\n"
                                 + "5. No campo de organizacao emissora, informe Fatec Zona Leste.\n"
-                                + "6. Na parte de competencias, adicione manualmente as seguintes competencias:\n"
-                                + "   " + competenciasLine + ".\n"
-                                + "7. Salve o cadastro para exibir o certificado no seu perfil.\n\n"
+                                + competenciasStep
+                                + saveStep
                                 + "Alem disso, aproveite essa conquista para publicar o certificado especial no seu feed do LinkedIn! "
                                 + "Compartilhar esse reconhecimento e uma forma direta de destacar sua participacao, fortalecer sua imagem profissional e ampliar a visibilidade do seu perfil. "
                                 + "Ao publicar, nao se esqueca de mencionar tambem a Fatec Zona Leste no texto!\n\n"
@@ -297,15 +305,7 @@ public class EventoParticipanteService {
                         }
                 }
 
-                List<String> resultado = new ArrayList<>();
-                for (int i = 0; i < 10; i++) {
-                        if (i < itens.size()) {
-                                resultado.add(itens.get(i));
-                        } else {
-                                resultado.add("Competencia " + (i + 1));
-                        }
-                }
-                return String.join(", ", resultado);
+                return String.join(", ", itens);
         }
 
         private String formatDay(Event event) {
@@ -318,14 +318,10 @@ public class EventoParticipanteService {
 
         private String buildPresentation(EventoParticipante participante) {
                 String descricao = participante.getDescricaoMedalha();
-                String competencias = participante.getCompetenciasMedalha();
                 if (descricao == null || descricao.isBlank()) {
                         descricao = "Participou do evento";
                 }
-                if (competencias == null || competencias.isBlank()) {
-                        return descricao;
-                }
-                return descricao + ", " + competencias;
+                return descricao;
         }
 
         private int toHours(Integer cargaHoraria) {
