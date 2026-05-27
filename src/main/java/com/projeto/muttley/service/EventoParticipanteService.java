@@ -44,6 +44,7 @@ public class EventoParticipanteService {
         private final ClientRepository clientRepository;
         private final EventRepository eventRepository;
         private final EventoParticipanteRepository eventoParticipanteRepository;
+        private final CertificadoService certificadoService;
         private final JavaMailSender mailSender;
         private final RestTemplate restTemplate;
         private final String certificateServiceBaseUrl;
@@ -51,12 +52,14 @@ public class EventoParticipanteService {
         public EventoParticipanteService(ClientRepository clientRepository,
                         EventRepository eventRepository,
                         EventoParticipanteRepository eventoParticipanteRepository,
+                        CertificadoService certificadoService,
                         JavaMailSender mailSender,
                         RestTemplateBuilder restTemplateBuilder,
                         @Value("${certificate.generator.base-url}") String certificateServiceBaseUrl) {
                 this.clientRepository = clientRepository;
                 this.eventRepository = eventRepository;
                 this.eventoParticipanteRepository = eventoParticipanteRepository;
+                this.certificadoService = certificadoService;
                 this.mailSender = mailSender;
                 this.restTemplate = restTemplateBuilder.build();
                 this.certificateServiceBaseUrl = certificateServiceBaseUrl;
@@ -157,7 +160,8 @@ public class EventoParticipanteService {
 
                 for (EventoParticipante participante : participantes) {
                         byte[] pdf = requestCertificatePdf(event, participante, planoDeFundo);
-                        sendCertificateEmail(participante, pdf, event);
+                        var certificado = certificadoService.createAndStore(event, participante, pdf);
+                        sendCertificateEmail(participante, certificado.getPdfData(), event);
                 }
         }
 
