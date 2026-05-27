@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -142,7 +143,7 @@ public class EventService {
 
         for (EventoParticipante participante : presentes) {
             byte[] pdf = requestCertificatePdf(saved, participante);
-            sendCertificateEmail(participante, pdf, saved.getTitulo());
+            sendCertificateEmail(participante, pdf, saved);
         }
         return toResponse(saved);
     }
@@ -322,19 +323,63 @@ public class EventService {
         return response.getBody();
     }
 
-    private void sendCertificateEmail(EventoParticipante participante, byte[] pdf, String tituloEvento) {
+    private void sendCertificateEmail(EventoParticipante participante, byte[] pdf, Event event) {
         try {
             var message = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(message, true);
             helper.setFrom("lizotlucas06@gmail.com");
             helper.setTo(participante.getClient().getEmail());
-            helper.setSubject("Certificado - " + tituloEvento);
-            helper.setText("Hello World", false);
+            String subject = "Seu certificado do evento " + event.getTitulo() + " esta disponivel";
+            helper.setSubject(subject);
+            helper.setText(buildCertificateEmailBody(event), false);
             helper.addAttachment("certificado.pdf", new org.springframework.core.io.ByteArrayResource(pdf));
             mailSender.send(message);
         } catch (Exception ex) {
             throw new IllegalStateException("Falha ao enviar certificado", ex);
         }
+    }
+
+    private String buildCertificateEmailBody(Event event) {
+        String competenciasLine = buildCompetenciasLine(event.getCompetencias());
+        return "Ola!\n\n"
+                + "Seu certificado de participacao no evento " + event.getTitulo() + " ja esta disponivel em anexo.\n\n"
+                + "Para adicionar essa conquista ao seu perfil no LinkedIn, siga este passo a passo:\n\n"
+                + "1. Acesse seu perfil no LinkedIn.\n"
+                + "2. Va ate a secao Licencas e certificados.\n"
+                + "3. Clique em Adicionar licenca ou certificado.\n"
+                + "4. Preencha as informacoes do certificado conforme constam no arquivo em anexo.\n"
+                + "5. No campo de organizacao emissora, informe Fatec Zona Leste.\n"
+                + "6. Na parte de competencias, adicione manualmente as seguintes competencias:\n"
+                + "   " + competenciasLine + ".\n"
+                + "7. Salve o cadastro para exibir o certificado no seu perfil.\n\n"
+                + "Alem disso, nao deixe essa conquista apenas no perfil e publique o certificado no seu feed do LinkedIn para destacar sua participacao no evento. "
+                + "Esse e um passo importante para reforcar sua presenca profissional, evidenciar suas competencias e ampliar a visibilidade do seu perfil para recrutadores e contatos da area. "
+                + "Ao publicar, nao se esqueca de mencionar tambem a Fatec Zona Leste no texto!\n\n"
+                + "Atenciosamente,\n"
+                + "Fatec Zona Leste";
+    }
+
+    private String buildCompetenciasLine(String competenciasRaw) {
+        List<String> itens = new ArrayList<>();
+        if (competenciasRaw != null && !competenciasRaw.isBlank()) {
+            String[] parts = competenciasRaw.split("[,;\\n]");
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    itens.add(trimmed);
+                }
+            }
+        }
+
+        List<String> resultado = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            if (i < itens.size()) {
+                resultado.add(itens.get(i));
+            } else {
+                resultado.add("Competencia " + (i + 1));
+            }
+        }
+        return String.join(", ", resultado);
     }
 
     private String formatDay(Event event) {

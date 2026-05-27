@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -156,7 +157,7 @@ public class EventoParticipanteService {
 
                 for (EventoParticipante participante : participantes) {
                         byte[] pdf = requestCertificatePdf(event, participante, planoDeFundo);
-                        sendCertificateEmail(participante, pdf, event.getTitulo());
+                        sendCertificateEmail(participante, pdf, event);
                 }
         }
 
@@ -238,19 +239,73 @@ public class EventoParticipanteService {
                 return response.getBody();
         }
 
-        private void sendCertificateEmail(EventoParticipante participante, byte[] pdf, String tituloEvento) {
+        private void sendCertificateEmail(EventoParticipante participante, byte[] pdf, Event event) {
                 try {
                         var message = mailSender.createMimeMessage();
                         var helper = new MimeMessageHelper(message, true);
                         helper.setFrom("lizotlucas06@gmail.com");
                         helper.setTo(participante.getClient().getEmail());
-                        helper.setSubject("Certificado - " + tituloEvento);
-                        helper.setText("Hello World", false);
+                        String subject = "Parabens! Seu certificado especial do evento " + event.getTitulo()
+                                        + " esta disponivel";
+                        helper.setSubject(subject);
+                        helper.setText(buildCertificateEmailBody(event, participante), false);
                         helper.addAttachment("certificado.pdf", new org.springframework.core.io.ByteArrayResource(pdf));
                         mailSender.send(message);
                 } catch (Exception ex) {
                         throw new IllegalStateException("Falha ao enviar certificado", ex);
                 }
+        }
+
+        private String buildCertificateEmailBody(Event event, EventoParticipante participante) {
+                String competenciasLine = buildCompetenciasLine(chooseCompetencias(event, participante));
+                return "Ola!\n\n"
+                                + "Parabens pela sua conquista! Seu certificado especial referente ao evento "
+                                + event.getTitulo() + " ja esta disponivel em anexo.\n\n"
+                                + "Para adicionar essa conquista ao seu perfil no LinkedIn, siga este passo a passo:\n\n"
+                                + "1. Acesse seu perfil no LinkedIn.\n"
+                                + "2. Va ate a secao Licencas e certificados.\n"
+                                + "3. Clique em Adicionar licenca ou certificado.\n"
+                                + "4. Preencha as informacoes do certificado conforme constam no arquivo em anexo.\n"
+                                + "5. No campo de organizacao emissora, informe Fatec Zona Leste.\n"
+                                + "6. Na parte de competencias, adicione manualmente as seguintes competencias:\n"
+                                + "   " + competenciasLine + ".\n"
+                                + "7. Salve o cadastro para exibir o certificado no seu perfil.\n\n"
+                                + "Alem disso, aproveite essa conquista para publicar o certificado especial no seu feed do LinkedIn! "
+                                + "Compartilhar esse reconhecimento e uma forma direta de destacar sua participacao, fortalecer sua imagem profissional e ampliar a visibilidade do seu perfil. "
+                                + "Ao publicar, nao se esqueca de mencionar tambem a Fatec Zona Leste no texto!\n\n"
+                                + "Atenciosamente,\n"
+                                + "Fatec Zona Leste";
+        }
+
+        private String chooseCompetencias(Event event, EventoParticipante participante) {
+                String competenciasMedalha = participante.getCompetenciasMedalha();
+                if (competenciasMedalha != null && !competenciasMedalha.isBlank()) {
+                        return competenciasMedalha;
+                }
+                return event.getCompetencias();
+        }
+
+        private String buildCompetenciasLine(String competenciasRaw) {
+                List<String> itens = new ArrayList<>();
+                if (competenciasRaw != null && !competenciasRaw.isBlank()) {
+                        String[] parts = competenciasRaw.split("[,;\\n]");
+                        for (String part : parts) {
+                                String trimmed = part.trim();
+                                if (!trimmed.isEmpty()) {
+                                        itens.add(trimmed);
+                                }
+                        }
+                }
+
+                List<String> resultado = new ArrayList<>();
+                for (int i = 0; i < 10; i++) {
+                        if (i < itens.size()) {
+                                resultado.add(itens.get(i));
+                        } else {
+                                resultado.add("Competencia " + (i + 1));
+                        }
+                }
+                return String.join(", ", resultado);
         }
 
         private String formatDay(Event event) {
