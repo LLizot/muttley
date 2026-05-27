@@ -51,14 +51,6 @@ public class EventRequestDTO {
 
     private String cargoSignatario;
 
-    private String qrCodeInscricao;
-
-    private String urlInscricao;
-
-    private String qrCodeConfirmacao;
-
-    private String urlConfirmacao;
-
     @Valid
     private List<ParticipanteVinculoRequestDTO> participantesEquipe;
 }

@@ -13,14 +13,22 @@ import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
 import com.projeto.muttley.repository.EventRepository;
 import com.projeto.muttley.repository.EventoParticipanteRepository;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -48,19 +56,25 @@ public class EventService {
     private final JavaMailSender mailSender;
     private final RestTemplate restTemplate;
     private final String certificateServiceBaseUrl;
+    private final String registrationBaseUrl;
+    private final String presenceBaseUrl;
 
     public EventService(EventRepository eventRepository,
             ClientRepository clientRepository,
             EventoParticipanteRepository eventoParticipanteRepository,
             JavaMailSender mailSender,
             RestTemplateBuilder restTemplateBuilder,
-            @Value("${certificate.generator.base-url}") String certificateServiceBaseUrl) {
+            @Value("${certificate.generator.base-url}") String certificateServiceBaseUrl,
+            @Value("${event.registration.base-url}") String registrationBaseUrl,
+            @Value("${event.presence.base-url}") String presenceBaseUrl) {
         this.eventRepository = eventRepository;
         this.clientRepository = clientRepository;
         this.eventoParticipanteRepository = eventoParticipanteRepository;
         this.mailSender = mailSender;
         this.restTemplate = restTemplateBuilder.build();
         this.certificateServiceBaseUrl = certificateServiceBaseUrl;
+        this.registrationBaseUrl = registrationBaseUrl;
+        this.presenceBaseUrl = presenceBaseUrl;
     }
 
     @Transactional
@@ -68,7 +82,9 @@ public class EventService {
         Event event = buildEventFromForm(form);
         attachEquipeParticipantes(event, form.getParticipantesEquipe());
         Event saved = eventRepository.save(event);
-        return toResponse(saved);
+        populateAccessLinks(saved);
+        Event updated = eventRepository.save(saved);
+        return toResponse(updated);
     }
 
     @Transactional(readOnly = true)
@@ -157,10 +173,34 @@ public class EventService {
         }
         event.setNomeSignatario(form.getNomeSignatario());
         event.setCargoSignatario(form.getCargoSignatario());
-        event.setQrCodeInscricao(form.getQrCodeInscricao());
-        event.setUrlInscricao(form.getUrlInscricao());
-        event.setQrCodeConfirmacao(form.getQrCodeConfirmacao());
-        event.setUrlConfirmacao(form.getUrlConfirmacao());
+    }
+
+    private void populateAccessLinks(Event event) {
+        String registrationUrl = buildEventUrl(registrationBaseUrl, event.getId());
+        String presenceUrl = buildEventUrl(presenceBaseUrl, event.getId());
+
+        event.setUrlInscricao(registrationUrl);
+        event.setUrlConfirmacao(presenceUrl);
+        event.setQrCodeInscricao(generateQrCodeDataUri(registrationUrl));
+        event.setQrCodeConfirmacao(generateQrCodeDataUri(presenceUrl));
+    }
+
+    private String buildEventUrl(String baseUrl, UUID eventId) {
+        String normalized = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        return normalized + "?eventId=" + eventId;
+    }
+
+    private String generateQrCodeDataUri(String content) {
+        try {
+            QRCodeWriter writer = new QRCodeWriter();
+            BitMatrix matrix = writer.encode(content, BarcodeFormat.QR_CODE, 150, 150);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            ImageIO.write(MatrixToImageWriter.toBufferedImage(matrix), "PNG", output);
+            String base64 = Base64.getEncoder().encodeToString(output.toByteArray());
+            return "data:image/png;base64," + base64;
+        } catch (WriterException | IOException ex) {
+            throw new IllegalStateException("Falha ao gerar QR code", ex);
+        }
     }
 
     private void validateNotFinalized(Event event) {
