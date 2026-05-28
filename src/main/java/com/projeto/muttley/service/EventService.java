@@ -2,6 +2,7 @@ package com.projeto.muttley.service;
 
 import com.projeto.muttley.dto.EventFormData;
 import com.projeto.muttley.dto.EventResponseDTO;
+import com.projeto.muttley.dto.EventoParticipanteListItemDTO;
 import com.projeto.muttley.dto.EventSummaryDTO;
 import com.projeto.muttley.dto.ParticipanteVinculoRequestDTO;
 import com.projeto.muttley.entity.Client;
@@ -248,6 +249,11 @@ public class EventService {
     }
 
     private EventResponseDTO toResponse(Event event) {
+        List<EventoParticipanteListItemDTO> participantes = event.getParticipantes().stream()
+                .filter(participante -> !TipoParticipante.OUVINTE.equals(participante.getTipoParticipante()))
+                .map(this::toListItem)
+                .toList();
+
         return EventResponseDTO.builder()
                 .id(event.getId())
                 .titulo(event.getTitulo())
@@ -271,6 +277,22 @@ public class EventService {
                 .urlConfirmacao(event.getUrlConfirmacao())
                 .dataCriacao(event.getDataCriacao())
                 .finalized(event.getFinalized())
+                .participantes(participantes)
+                .build();
+    }
+
+    private EventoParticipanteListItemDTO toListItem(EventoParticipante participante) {
+        String status = Boolean.TRUE.equals(participante.getPresencaConfirmada())
+                ? "PRESENTE"
+                : "INSCRITO";
+
+        return EventoParticipanteListItemDTO.builder()
+                .id(participante.getId())
+                .nome(participante.getClient().getNome())
+                .email(participante.getClient().getEmail())
+                .tipoParticipante(participante.getTipoParticipante())
+                .dataInscricao(participante.getDataInscricao())
+                .statusPresenca(status)
                 .build();
     }
 

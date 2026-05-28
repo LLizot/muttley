@@ -3,6 +3,7 @@ package com.projeto.muttley.dto;
 import com.projeto.muttley.entity.Modalidade;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,4 +38,5 @@ public class EventResponseDTO {
     private String urlConfirmacao;
     private LocalDateTime dataCriacao;
     private Boolean finalized;
+    private List<EventoParticipanteListItemDTO> participantes;
 }
