@@ -12,6 +12,7 @@ import com.projeto.muttley.entity.TipoParticipante;
 import com.projeto.muttley.exception.EventFinalizedException;
 import com.projeto.muttley.exception.ResourceNotFoundException;
 import com.projeto.muttley.repository.ClientRepository;
+import com.projeto.muttley.repository.CertificadoRepository;
 import com.projeto.muttley.repository.EventRepository;
 import com.projeto.muttley.repository.EventoParticipanteRepository;
 import com.google.zxing.BarcodeFormat;
@@ -55,6 +56,7 @@ public class EventService {
     private final EventRepository eventRepository;
     private final ClientRepository clientRepository;
     private final EventoParticipanteRepository eventoParticipanteRepository;
+    private final CertificadoRepository certificadoRepository;
     private final CertificadoService certificadoService;
     private final JavaMailSender mailSender;
     private final RestTemplate restTemplate;
@@ -66,6 +68,7 @@ public class EventService {
     public EventService(EventRepository eventRepository,
             ClientRepository clientRepository,
             EventoParticipanteRepository eventoParticipanteRepository,
+            CertificadoRepository certificadoRepository,
             CertificadoService certificadoService,
             JavaMailSender mailSender,
             RestTemplateBuilder restTemplateBuilder,
@@ -76,6 +79,7 @@ public class EventService {
         this.eventRepository = eventRepository;
         this.clientRepository = clientRepository;
         this.eventoParticipanteRepository = eventoParticipanteRepository;
+        this.certificadoRepository = certificadoRepository;
         this.certificadoService = certificadoService;
         this.mailSender = mailSender;
         this.restTemplate = restTemplateBuilder.build();
@@ -131,6 +135,7 @@ public class EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento nao encontrado"));
         validateNotFinalized(event);
+        certificadoRepository.deleteByEventoId(event.getId());
         eventRepository.delete(event);
     }
 
@@ -231,6 +236,16 @@ public class EventService {
         java.util.Set<UUID> incomingIds = equipe.stream()
                 .map(ParticipanteVinculoRequestDTO::getClientId)
                 .collect(java.util.stream.Collectors.toSet());
+
+        List<UUID> removidos = event.getParticipantes().stream()
+                .filter(participante -> !TipoParticipante.OUVINTE.equals(participante.getTipoParticipante())
+                        && !incomingIds.contains(participante.getClient().getId()))
+                .map(EventoParticipante::getId)
+                .toList();
+
+        if (!removidos.isEmpty()) {
+            certificadoRepository.deleteByParticipanteIdIn(removidos);
+        }
 
         event.getParticipantes()
                 .removeIf(participante -> !TipoParticipante.OUVINTE.equals(participante.getTipoParticipante())
