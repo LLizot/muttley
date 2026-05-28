@@ -48,6 +48,7 @@ public class EventoParticipanteService {
         private final JavaMailSender mailSender;
         private final RestTemplate restTemplate;
         private final String certificateServiceBaseUrl;
+        private final String mailFrom;
 
         public EventoParticipanteService(ClientRepository clientRepository,
                         EventRepository eventRepository,
@@ -55,7 +56,8 @@ public class EventoParticipanteService {
                         CertificadoService certificadoService,
                         JavaMailSender mailSender,
                         RestTemplateBuilder restTemplateBuilder,
-                        @Value("${certificate.generator.base-url}") String certificateServiceBaseUrl) {
+                        @Value("${certificate.generator.base-url}") String certificateServiceBaseUrl,
+                        @Value("${app.mail.from}") String mailFrom) {
                 this.clientRepository = clientRepository;
                 this.eventRepository = eventRepository;
                 this.eventoParticipanteRepository = eventoParticipanteRepository;
@@ -63,6 +65,7 @@ public class EventoParticipanteService {
                 this.mailSender = mailSender;
                 this.restTemplate = restTemplateBuilder.build();
                 this.certificateServiceBaseUrl = certificateServiceBaseUrl;
+                this.mailFrom = mailFrom;
         }
 
         @Transactional
@@ -248,7 +251,7 @@ public class EventoParticipanteService {
                 try {
                         var message = mailSender.createMimeMessage();
                         var helper = new MimeMessageHelper(message, true);
-                        helper.setFrom("lizotlucas06@gmail.com");
+                        helper.setFrom(mailFrom);
                         helper.setTo(participante.getClient().getEmail());
                         String subject = "Parabens! Seu certificado especial do evento " + event.getTitulo()
                                         + " esta disponivel";

@@ -4,6 +4,7 @@ import com.projeto.muttley.dto.ApiResponse;
 import com.projeto.muttley.dto.EmailTestRequestDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -17,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class TestController {
 
     private final JavaMailSender mailSender;
+    private final String mailFrom;
 
-    public TestController(JavaMailSender mailSender) {
+    public TestController(JavaMailSender mailSender, @Value("${app.mail.from}") String mailFrom) {
         this.mailSender = mailSender;
+        this.mailFrom = mailFrom;
     }
 
     @GetMapping("/")
@@ -44,7 +47,7 @@ public class TestController {
         try {
             var message = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(message, false);
-            helper.setFrom("lizotlucas06@gmail.com");
+            helper.setFrom(mailFrom);
             helper.setTo(email);
             helper.setSubject("Email de teste");
             helper.setText("Hello World", false);
