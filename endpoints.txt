@@ -71,12 +71,10 @@ Form-data:
 - arquivoAssinaturaSignatario: (arquivo binario)
 - nomeSignatario: Ana Souza
 - cargoSignatario: Coordenadora
-- qrCodeInscricao: data:image/png;base64,...
-- urlInscricao: https://exemplo.com/inscricao
-- qrCodeConfirmacao: data:image/png;base64,...
-- urlConfirmacao: https://exemplo.com/confirmacao
 - participantesEquipe[0].clientId: 00000000-0000-0000-0000-000000000000
 - participantesEquipe[0].tipoParticipante: PALESTRANTE
+- participantesEquipe[1].clientId: 00000000-0000-0000-0000-000000000000
+- participantesEquipe[1].tipoParticipante: ORGANIZADOR
 
 GET /events
 Query params (opcionais):

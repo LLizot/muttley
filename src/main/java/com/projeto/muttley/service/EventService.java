@@ -216,7 +216,7 @@ public class EventService {
     }
 
     private void attachEquipeParticipantes(Event event, List<ParticipanteVinculoRequestDTO> equipe) {
-        if (equipe == null || equipe.isEmpty()) {
+        if (equipe == null) {
             return;
         }
 
@@ -224,6 +224,14 @@ public class EventService {
         for (EventoParticipante participante : event.getParticipantes()) {
             existentes.put(participante.getClient().getId(), participante);
         }
+
+        java.util.Set<UUID> incomingIds = equipe.stream()
+                .map(ParticipanteVinculoRequestDTO::getClientId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        event.getParticipantes()
+                .removeIf(participante -> !TipoParticipante.OUVINTE.equals(participante.getTipoParticipante())
+                        && !incomingIds.contains(participante.getClient().getId()));
 
         for (ParticipanteVinculoRequestDTO item : equipe) {
             Client client = clientRepository.findById(item.getClientId())
@@ -242,7 +250,7 @@ public class EventService {
             }
 
             TipoParticipante tipo = item.getTipoParticipante();
-            if (tipo != null) {
+            if (tipo != null && !tipo.equals(participante.getTipoParticipante())) {
                 participante.setTipoParticipante(tipo);
             }
         }
@@ -288,6 +296,7 @@ public class EventService {
 
         return EventoParticipanteListItemDTO.builder()
                 .id(participante.getId())
+                .clientId(participante.getClient().getId())
                 .nome(participante.getClient().getNome())
                 .email(participante.getClient().getEmail())
                 .tipoParticipante(participante.getTipoParticipante())

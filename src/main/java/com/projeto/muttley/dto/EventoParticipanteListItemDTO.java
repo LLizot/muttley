@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class EventoParticipanteListItemDTO {
 
     private UUID id;
+    private UUID clientId;
     private String nome;
     private String email;
     private TipoParticipante tipoParticipante;

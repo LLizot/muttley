@@ -187,6 +187,7 @@ public class EventoParticipanteService {
 
                 return EventoParticipanteListItemDTO.builder()
                                 .id(participante.getId())
+                                .clientId(participante.getClient().getId())
                                 .nome(participante.getClient().getNome())
                                 .email(participante.getClient().getEmail())
                                 .tipoParticipante(participante.getTipoParticipante())
